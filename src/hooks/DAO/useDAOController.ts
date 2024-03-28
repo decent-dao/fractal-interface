@@ -12,7 +12,19 @@ import { useGovernanceContracts } from './loaders/useGovernanceContracts';
 
 export default function useDAOController() {
   const [searchParams] = useSearchParams();
-  const daoAddress = searchParams.get('dao');
+  const addressWithPrefix = searchParams.get('dao');
+
+  if (addressWithPrefix === null) {
+    throw new Error('address is null');
+  }
+
+  if (!addressWithPrefix.includes(':')) {
+    throw new Error("address doesn't include prefix");
+  }
+
+  const prefixAndAddress = addressWithPrefix.split(':');
+  const daoNetwork = prefixAndAddress[0];
+  const daoAddress = prefixAndAddress[1];
 
   const {
     node: {
@@ -20,13 +32,14 @@ export default function useDAOController() {
     },
     action,
   } = useFractal();
+
   useEffect(() => {
     if (!daoAddress) {
       action.resetDAO();
     }
   }, [action, daoAddress]);
 
-  const { nodeLoading, errorLoading } = useFractalNode({ daoAddress: daoAddress || undefined });
+  const { nodeLoading, errorLoading, wrongNetwork } = useFractalNode({ daoAddress, daoNetwork });
   useGovernanceContracts();
   useFractalGuardContracts({});
   useFractalFreeze({ parentSafeAddress: parentAddress });
@@ -34,5 +47,5 @@ export default function useDAOController() {
   useFractalTreasury();
   useERC20Claim();
   useSnapshotProposals();
-  return { nodeLoading, errorLoading };
+  return { nodeLoading, errorLoading, wrongNetwork };
 }
